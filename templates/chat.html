@@ -36,7 +36,7 @@
                         <form id="chatForm" class="input-group">
                             <input type="text" id="userInput" name="msg" placeholder="Type your message..." autocomplete="off" class="form-control type_msg" required/>
                             <div class="input-group-append">
-                                <button type="submit" class="input-group-text send_btn">
+                                <button type="submit" id="sendBtn" class="input-group-text send_btn">
                                     <i class="fas fa-location-arrow"></i>
                                 </button>
                             </div>
@@ -50,8 +50,72 @@
     <!-- Chat Script -->
     <script>
         $(document).ready(function() {
+            let isProcessing = false;
+
+            function addThinkingMessage() {
+                const time = new Date().toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'});
+                const thinkingId = 'thinking-' + Date.now();
+                
+                let thinkingHtml = `
+                    <div id="${thinkingId}" class="d-flex justify-content-start mb-4">
+                        <div class="img_cont_msg">
+                            <img src="https://cdn-icons-png.flaticon.com/512/387/387569.png" class="rounded-circle user_img_msg">
+                        </div>
+                        <div class="msg_cotainer thinking-msg">
+                            <div class="thinking-animation">
+                                <span class="thinking-dot"></span>
+                                <span class="thinking-dot"></span>
+                                <span class="thinking-dot"></span>
+                            </div>
+                            <div class="thinking-text">Thinking...</div>
+                            <span class="msg_time">${time}</span>
+                        </div>
+                    </div>`;
+                
+                $("#chatBody").append(thinkingHtml);
+                $("#chatBody").scrollTop($("#chatBody")[0].scrollHeight);
+                return thinkingId;
+            }
+
+            function removeThinkingMessage(thinkingId) {
+                $("#" + thinkingId).remove();
+            }
+
+            function addBotResponse(response) {
+                const time = new Date().toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'});
+                
+                let botHtml = `
+                    <div class="d-flex justify-content-start mb-4">
+                        <div class="img_cont_msg">
+                            <img src="https://cdn-icons-png.flaticon.com/512/387/387569.png" class="rounded-circle user_img_msg">
+                        </div>
+                        <div class="msg_cotainer">
+                            ${response}
+                            <span class="msg_time">${time}</span>
+                        </div>
+                    </div>`;
+                
+                $("#chatBody").append(botHtml);
+                $("#chatBody").scrollTop($("#chatBody")[0].scrollHeight);
+            }
+
+            function setProcessingState(processing) {
+                isProcessing = processing;
+                if (processing) {
+                    $("#sendBtn").prop('disabled', true);
+                    $("#userInput").prop('disabled', true);
+                    $("#sendBtn").html('<i class="fas fa-spinner fa-spin"></i>');
+                } else {
+                    $("#sendBtn").prop('disabled', false);
+                    $("#userInput").prop('disabled', false);
+                    $("#sendBtn").html('<i class="fas fa-location-arrow"></i>');
+                }
+            }
+
             $("#chatForm").on("submit", function(e) {
                 e.preventDefault();
+
+                if (isProcessing) return;
 
                 let rawText = $("#userInput").val().trim();
                 if (!rawText) return;
@@ -72,25 +136,34 @@
                 $("#chatBody").append(userHtml);
                 $("#userInput").val("");
 
+                // Set processing state and add thinking animation
+                setProcessingState(true);
+                const thinkingId = addThinkingMessage();
+
                 // Send to Flask backend
                 $.post("/get", { msg: rawText })
                     .done(function(data) {
-                        let botHtml = `
-                            <div class="d-flex justify-content-start mb-4">
-                                <div class="img_cont_msg">
-                                    <img src="https://cdn-icons-png.flaticon.com/512/387/387569.png" class="rounded-circle user_img_msg">
-                                </div>
-                                <div class="msg_cotainer">
-                                    ${data}
-                                    <span class="msg_time">${time}</span>
-                                </div>
-                            </div>`;
-                        $("#chatBody").append(botHtml);
-                        $("#chatBody").scrollTop($("#chatBody")[0].scrollHeight);
+                        // Remove thinking message and add bot response
+                        removeThinkingMessage(thinkingId);
+                        addBotResponse(data);
                     })
                     .fail(function() {
-                        alert("Server error! Please check Flask logs.");
+                        // Remove thinking message and show error
+                        removeThinkingMessage(thinkingId);
+                        addBotResponse("Sorry, I'm experiencing technical difficulties. Please try again.");
+                    })
+                    .always(function() {
+                        // Reset processing state
+                        setProcessingState(false);
                     });
+            });
+
+            // Handle Enter key press
+            $("#userInput").on("keypress", function(e) {
+                if (e.which === 13 && !e.shiftKey) {
+                    e.preventDefault();
+                    $("#chatForm").submit();
+                }
             });
         });
     </script>
