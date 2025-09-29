@@ -1,0 +1,58 @@
+name: Deploy Application Docker Image to EC2 instance
+
+on:
+  push:
+    branches: [main]    #pushing code to the main branch will trigger this workflow
+
+
+jobs:
+  Continuous-Integration:  # Job 1 name (Build docker image and push it to AWS ECR)
+    runs-on: ubuntu-latest  # Github-hosted VM par run hogi jobs not EC2
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v2  # Prebuilt-github action that we are using. Downloads the repo code into the runner VM.
+
+      - name: Configure AWS credentials
+        uses: aws-actions/configure-aws-credentials@v1 # AWS github action that set ups the aws credentials in the runner VM.
+        with:
+          aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}
+          aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+          aws-region: ${{ secrets.AWS_DEFAULT_REGION }}
+
+      - name: Login to Amazon ECR
+        id: login-ecr  # Id assigned taki isko reference kar sake later like steps.login-ecr.output.registry
+        uses: aws-actions/amazon-ecr-login@v1  # Docker commands can run on github vm .But this action provides access to my AWS ECR uri to build and push image there.
+
+      - name: Build, tag, and push image to Amazon ECR
+        id: build-image
+        env:
+          ECR_REGISTRY: ${{ steps.login-ecr.outputs.registry }}
+          ECR_REPOSITORY: ${{ secrets.ECR_REPO }}
+          IMAGE_TAG: latest
+        run: |
+          docker build -t $ECR_REGISTRY/$ECR_REPOSITORY:$IMAGE_TAG .  
+          docker push $ECR_REGISTRY/$ECR_REPOSITORY:$IMAGE_TAG
+          echo "::set-output name=image::$ECR_REGISTRY/$ECR_REPOSITORY:$IMAGE_TAG"
+
+  Continuous-Deployment:     #Job 2 name (Pulls the docker image from AWS ECR and runs it on EC2) 
+    needs: Continuous-Integration # Only runs if CI job is successful
+    runs-on: self-hosted  # Simple hai github runner pe nhi balki EC2 machine jsiko as runner config kiya hai usme run hogi. 
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v3   # Pulls repo on EC2.
+
+      - name: Configure AWS credentials   # Needed so EC2 can log in to ECR and pull the Docker image.
+        uses: aws-actions/configure-aws-credentials@v1
+        with:
+          aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}
+          aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+          aws-region: ${{ secrets.AWS_DEFAULT_REGION }}
+
+      - name: Login to Amazon ECR  # Authenticates Docker on EC2 with ECR.
+        id: login-ecr
+        uses: aws-actions/amazon-ecr-login@v1
+
+      - name: Run Docker Image to serve users  # Runs Docker container on EC2 instance.
+        run: |
+         docker run -d -e AWS_ACCESS_KEY_ID="${{ secrets.AWS_ACCESS_KEY_ID }}" -e AWS_SECRET_ACCESS_KEY="${{ secrets.AWS_SECRET_ACCESS_KEY }}" -e AWS_DEFAULT_REGION="${{ secrets.AWS_DEFAULT_REGION }}" -e PINECONE_API_KEY="${{ secrets.PINECONE_API_KEY }}" -e OPENAI_API_KEY="${{ secrets.OPENAI_API_KEY }}" -p 8080:8080 "${{ steps.login-ecr.outputs.registry }}"/"${{ secrets.ECR_REPO }}":latest

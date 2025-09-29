@@ -118,3 +118,17 @@ open up localhost:
    - ECR_REPO
    - PINECONE_API_KEY
    - OPENAI_API_KEY
+
+# CI/CD FLOW
+- Push to GitHub → main branch.
+
+- CI job (on GitHub-hosted runner):
+
+- Checkout → Configure AWS → Build Docker image → Push to ECR.
+
+- CD job (on your EC2 self-hosted runner):
+
+- Checkout → Configure AWS → Login ECR → Pull & run Docker container.
+
+- Result:
+- Your app is deployed inside Docker on EC2 automatically.
