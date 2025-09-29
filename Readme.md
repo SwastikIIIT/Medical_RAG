@@ -1,134 +1,323 @@
-### STEP 01- Create a conda environment after opening the repository
+# 🏥 MediBot – AI-Powered Healthcare Chatbot
+
+![Python](https://img.shields.io/badge/Python-3.10-blue.svg)
+![Flask](https://img.shields.io/badge/Flask-2.0+-green.svg)
+![Docker](https://img.shields.io/badge/Docker-Enabled-2496ED.svg)
+![AWS](https://img.shields.io/badge/AWS-Deployed-FF9900.svg)
+![License](https://img.shields.io/badge/License-MIT-yellow.svg)
+
+MediBot is an intelligent healthcare chatbot powered by **LangChain**, **Flask**, **GPT**, and **Pinecone**. It enables users to query medical information using advanced vector embeddings stored in Pinecone, delivered through a responsive Flask web application.
+
+## 📋 Table of Contents
+
+- [Features](#-features)
+- [Tech Stack](#️-tech-stack)
+- [Architecture](#-architecture)
+- [Local Development Setup](#️-local-development-setup)
+- [AWS CI/CD Deployment](#-aws-cicd-deployment)
+- [Workflow Diagram](#-cicd-workflow-diagram)
+- [Environment Variables](#-environment-variables)
+- [Contributing](#-contributing)
+- [License](#-license)
+
+## ✨ Features
+
+- 🤖 **AI-Powered Responses** - Leverages GPT for intelligent medical query responses
+- 🔍 **Vector Search** - Uses Pinecone for efficient semantic search
+- 🚀 **Auto-Deployment** - GitHub Actions CI/CD pipeline to AWS
+- 🐳 **Dockerized** - Containerized application for consistent deployments
+- ☁️ **Cloud-Ready** - Deployed on AWS EC2 with ECR integration
+- 🔒 **Secure** - Environment-based configuration with secrets management
+
+## 🛠️ Tech Stack
+
+| Technology | Purpose |
+|------------|---------|
+| **Python 3.10** | Core programming language |
+| **LangChain** | LLM framework for AI workflows |
+| **Flask** | Web application framework |
+| **OpenAI GPT** | Language model for responses |
+| **Pinecone** | Vector database for embeddings |
+| **Docker** | Containerization |
+| **AWS ECR** | Docker image registry |
+| **AWS EC2** | Application hosting |
+| **GitHub Actions** | CI/CD automation |
+
+## 🏗 Architecture
+
+```
+┌─────────────┐      ┌──────────────┐      ┌─────────────┐
+│   User      │─────▶│  Flask Web   │─────▶│  LangChain  │
+│  Interface  │      │     App      │      │   Agent     │
+└─────────────┘      └──────────────┘      └─────────────┘
+                            │                      │
+                            │                      ▼
+                            │              ┌─────────────┐
+                            │              │   OpenAI    │
+                            │              │     GPT     │
+                            │              └─────────────┘
+                            │                      │
+                            ▼                      ▼
+                     ┌──────────────┐      ┌─────────────┐
+                     │   Pinecone   │◀─────│  Embeddings │
+                     │    Vector    │      │   Storage   │
+                     │   Database   │      └─────────────┘
+                     └──────────────┘
+```
+
+## ⚙️ Local Development Setup
+
+### **Prerequisites**
+
+- Python 3.10+
+- Conda (Anaconda/Miniconda)
+- Pinecone Account
+- Google Cloud Account (for Gemini API)
+
+### **Step 1 – Create Conda Environment**
 
 ```bash
 conda create -n medibot python=3.10 -y
-```
-
-```bash
 conda activate medibot
 ```
 
+### **Step 2 – Install Dependencies**
 
-### STEP 02- install the requirements
 ```bash
 pip install -r requirements.txt
 ```
 
+### **Step 3 – Configure Environment Variables**
 
-### Create a `.env` file in the root directory and add your Pinecone & openai credentials as follows:
+Create a `.env` file in the project root:
 
-```ini
-PINECONE_API_KEY = "xxxxxxxxxxxxxxxxxxxxxxxxxxxxx"
-OPENAI_API_KEY = "xxxxxxxxxxxxxxxxxxxxxxxxxxxxx"
+```env
+PINECONE_API_KEY=your_pinecone_api_key_here
+GOOGLE_APPLICATION_CREDENTIALS=path/to/gemini_key.json
 ```
 
+### **Step 4 – Store Embeddings in Pinecone**
 
 ```bash
-# run the following command to store embeddings to pinecone
 python store_index.py
 ```
 
+This script processes medical data and stores vector embeddings in Pinecone.
+
+### **Step 5 – Run Application**
+
 ```bash
-# Finally run the following command
 python app.py
 ```
 
-Now,
+Navigate to: **http://localhost:8080**
+
+## 🚀 AWS CI/CD Deployment
+
+Our deployment pipeline uses **GitHub Actions** to automate the entire deployment process from code push to production.
+
+### **Deployment Flow**
+
+1. **Code Push** → Triggers GitHub Actions workflow
+2. **CI Job** (GitHub-hosted runner)
+   - Checkout code
+   - Configure AWS credentials
+   - Build Docker image
+   - Push to AWS ECR
+3. **CD Job** (EC2 self-hosted runner)
+   - Pull latest image from ECR
+   - Stop old container
+   - Run new container with environment variables
+
+### **AWS Infrastructure Setup**
+
+#### 1️⃣ **IAM User Configuration**
+
+Create an IAM user with the following policies:
+- `AmazonEC2FullAccess`
+- `AmazonEC2ContainerRegistryFullAccess`
+
+#### 2️⃣ **AWS ECR Repository**
+
 ```bash
-open up localhost:
+# Create ECR repository
+aws ecr create-repository --repository-name medi-bot --region ap-south-1
 ```
 
+Example ECR URI: `777014042666.dkr.ecr.ap-south-1.amazonaws.com/medi-bot`
 
-### Techstack Used:
+#### 3️⃣ **EC2 Instance Setup**
 
-- Python
-- LangChain
-- Flask
-- GPT
-- Pinecone
+Launch an Ubuntu EC2 instance and install Docker:
 
+```bash
+# Install Docker
+curl -fsSL https://get.docker.com -o get-docker.sh
+sudo sh get-docker.sh
+sudo usermod -aG docker ubuntu
+newgrp docker
+```
 
+#### 4️⃣ **Configure Self-Hosted Runner**
 
-# AWS-CICD-Deployment-with-Github-Actions
+1. Go to **Repository Settings** → **Actions** → **Runners** → **New self-hosted runner**
+2. Follow the setup instructions on your EC2 instance
+3. Start the runner service
 
-## 1. Login to AWS console.
+#### 5️⃣ **GitHub Secrets Configuration**
 
-## 2. Create IAM user for deployment
+Add the following secrets in **Settings** → **Secrets and variables** → **Actions**:
 
-	#with specific access
+| Secret Name | Description |
+|-------------|-------------|
+| `AWS_ACCESS_KEY_ID` | AWS IAM access key |
+| `AWS_SECRET_ACCESS_KEY` | AWS IAM secret key |
+| `AWS_DEFAULT_REGION` | AWS region (e.g., ap-south-1) |
+| `ECR_REPO` | ECR repository name (e.g., medi-bot) |
+| `PINECONE_API_KEY` | Pinecone API key |
 
-	1. EC2 access : It is virtual machine
+## 📊 CI/CD Workflow Diagram
 
-	2. ECR: Elastic Container registry to save your docker image in aws
+```mermaid
+flowchart TD
+    A[👨‍💻 Developer Pushes Code to Main] --> B[🔄 GitHub Actions CI Job]
+    B --> C[📥 Checkout Repository]
+    C --> D[🔐 Configure AWS Credentials]
+    D --> E[🔑 Login to Amazon ECR]
+    E --> F[🏗️ Build & Push Docker Image to ECR]
+    F --> G[🚀 GitHub Actions CD Job on EC2]
+    G --> H[📥 Checkout Repository on EC2]
+    H --> I[🔐 Configure AWS Credentials on EC2]
+    I --> J[🔑 Login EC2 to Amazon ECR]
+    J --> K[📦 Pull Docker Image from ECR]
+    K --> L[▶️ Run Docker Container on EC2]
+    L --> M[✅ Application Live on EC2:8080]
+    
+    style A fill:#e1f5ff
+    style F fill:#c8e6c9
+    style M fill:#81c784
+```
 
+## 📁 Project Structure
 
-	#Description: About the deployment
+```
+medibot/
+├── .github/
+│   └── workflows/
+│       └── cicd.yml          # CI/CD workflow configuration
+├── app.py                    # Flask application
+├── data/
+│   └── source.pdf             # Dataset
+├── src/
+│   └── __init__.py
+│	└── helper.py               # Helper functions
+│	└── prompt.py               # Coniguration of system prompt
+├── store_index.py              # Script to store embeddings
+├── requirements.txt            # Python dependencies
+├── Dockerfile                  # Docker configuration
+├── .env                        # Environment variables (not committed)
+├── gemini_key.json            # Google Cloud credentials (not committed)
+└── README.md                   # Project documentation
+```
 
-	1. Build docker image of the source code
+## 🔒 Environment Variables
 
-	2. Push your docker image to ECR
+| Variable | Description | Required |
+|----------|-------------|----------|
+| `PINECONE_API_KEY` | API key for Pinecone vector database | ✅ |
+| `GOOGLE_APPLICATION_CREDENTIALS` | Path to Google Cloud service account JSON | ✅ |
+| `AWS_ACCESS_KEY_ID` | AWS IAM access key (deployment only) | ✅ |
+| `AWS_SECRET_ACCESS_KEY` | AWS IAM secret key (deployment only) | ✅ |
+| `AWS_DEFAULT_REGION` | AWS region (deployment only) | ✅ |
 
-	3. Launch Your EC2 
+## 📜 GitHub Actions Workflow
 
-	4. Pull Your image from ECR in EC2
+The complete workflow is defined in `.github/workflows/deploy.yml`:
 
-	5. Lauch your docker image in EC2
+```yaml
+name: Deploy Application Docker Image to EC2 instance
 
-	#Policy:
+on:
+  push:
+    branches: [main]
 
-	1. AmazonEC2ContainerRegistryFullAccess
+jobs:
+  Continuous-Integration:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v2
 
-	2. AmazonEC2FullAccess
+      - name: Configure AWS credentials
+        uses: aws-actions/configure-aws-credentials@v1
+        with:
+          aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}
+          aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+          aws-region: ${{ secrets.AWS_DEFAULT_REGION }}
 
-	
-## 3. Create ECR repo to store/save docker image
-    - Save the URI: 777014042666.dkr.ecr.ap-south-1.amazonaws.com/medi-bot  
+      - name: Login to Amazon ECR
+        id: login-ecr
+        uses: aws-actions/amazon-ecr-login@v1
 
-	
-## 4. Create EC2 machine (Ubuntu) 
+      - name: Build, tag, and push image to Amazon ECR
+        id: build-image
+        env:
+          ECR_REGISTRY: ${{ steps.login-ecr.outputs.registry }}
+          ECR_REPOSITORY: ${{ secrets.ECR_REPO }}
+          IMAGE_TAG: latest
+        run: |
+          docker build -t $ECR_REGISTRY/$ECR_REPOSITORY:$IMAGE_TAG .
+          docker push $ECR_REGISTRY/$ECR_REPOSITORY:$IMAGE_TAG
 
-## 5. Open EC2 and Install docker in EC2 Machine:
-	
-	
-	#optinal
+  Continuous-Deployment:
+    needs: Continuous-Integration
+    runs-on: self-hosted
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v3
 
-	sudo apt-get update -y
+      - name: Configure AWS credentials
+        uses: aws-actions/configure-aws-credentials@v1
+        with:
+          aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}
+          aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+          aws-region: ${{ secrets.AWS_DEFAULT_REGION }}
 
-	sudo apt-get upgrade
-	
-	#required
+      - name: Login to Amazon ECR
+        id: login-ecr
+        uses: aws-actions/amazon-ecr-login@v1
 
-	curl -fsSL https://get.docker.com -o get-docker.sh
+      - name: Run Docker Image on EC2
+        run: |
+          docker run -d \
+            -v /home/ubuntu/secrets/gemini_key.json:/app/gemini_key.json \
+            -e AWS_ACCESS_KEY_ID="${{ secrets.AWS_ACCESS_KEY_ID }}" \
+            -e AWS_SECRET_ACCESS_KEY="${{ secrets.AWS_SECRET_ACCESS_KEY }}" \
+            -e AWS_DEFAULT_REGION="${{ secrets.AWS_DEFAULT_REGION }}" \
+            -e PINECONE_API_KEY="${{ secrets.PINECONE_API_KEY }}" \
+            -e GOOGLE_APPLICATION_CREDENTIALS="/app/gemini_key.json" \
+            -p 8080:8080 \
+            "${{ steps.login-ecr.outputs.registry }}"/"${{ secrets.ECR_REPO }}":latest
+```
 
-	sudo sh get-docker.sh
+## 🤝 Contributing
 
-	sudo usermod -aG docker ubuntu
+Contributions are welcome! Please follow these steps:
 
-	newgrp docker
-	
-# 6. Configure EC2 as self-hosted runner:
-    setting>actions>runner>new self hosted runner> choose os> then run command one by one
+1. Fork the repository
+2. Create a feature branch (`git checkout -b feature/AmazingFeature`)
+3. Commit your changes (`git commit -m 'Add some AmazingFeature'`)
+4. Push to the branch (`git push origin feature/AmazingFeature`)
+5. Open a Pull Request
 
+## 📝 License
 
-# 7. Setup github secrets:
+This project is licensed under the Apache 2.0 License.
 
-   - AWS_ACCESS_KEY_ID
-   - AWS_SECRET_ACCESS_KEY
-   - AWS_DEFAULT_REGION
-   - ECR_REPO
-   - PINECONE_API_KEY
-   - OPENAI_API_KEY
+## 📧 Contact
 
-# CI/CD FLOW
-- Push to GitHub → main branch.
+For questions or support, please open an issue in the GitHub repository.
 
-- CI job (on GitHub-hosted runner):
+---
 
-- Checkout → Configure AWS → Build Docker image → Push to ECR.
-
-- CD job (on your EC2 self-hosted runner):
-
-- Checkout → Configure AWS → Login ECR → Pull & run Docker container.
-
-- Result:
-- Your app is deployed inside Docker on EC2 automatically.
+**Made with ❤️ using LangChain, Flask, and AWS**
