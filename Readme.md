@@ -139,11 +139,7 @@ Create an IAM user with the following policies:
 
 #### 2️⃣ **AWS ECR Repository**
 
-```bash
-# Create ECR repository
-aws ecr create-repository --repository-name medi-bot --region ap-south-1
-```
-
+Use AWS Consoel for the same.
 Example ECR URI: `777014042666.dkr.ecr.ap-south-1.amazonaws.com/medi-bot`
 
 #### 3️⃣ **EC2 Instance Setup**
@@ -193,9 +189,9 @@ flowchart TD
     K --> L[▶️ Run Docker Container on EC2]
     L --> M[✅ Application Live on EC2:8080]
     
-    style A fill:#e1f5ff
-    style F fill:#c8e6c9
-    style M fill:#81c784
+    style A fill:#4fc3f7
+    style F fill:#66bb6a
+    style M fill:#388e3c
 ```
 
 ## 📁 Project Structure
