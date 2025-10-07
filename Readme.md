@@ -21,7 +21,7 @@ MediBot uses **Retrieval-Augmented Generation (RAG)** to provide accurate, conte
 3. **Generating** responses based on both the query and retrieved information
 
 ### Why RAG for Healthcare?
-
+ 
 - ✅ **Accuracy**: Responses grounded in verified medical documents
 - ✅ **Up-to-date**: Easy to update knowledge base without retraining models
 - ✅ **Transparency**: Can trace answers back to source documents
